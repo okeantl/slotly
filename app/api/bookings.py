@@ -1,7 +1,9 @@
+from collections.abc import Sequence
 from datetime import timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import Range
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -42,3 +44,24 @@ async def create_booking(data: BookingCreate, session: SessionDep) -> Booking:
             raise HTTPException(status.HTTP_409_CONFLICT, "time slot is taken") from exc
         raise
     return booking
+
+
+@router.get("/{booking_id}", response_model=BookingRead)
+async def get_booking(booking_id: int, session: SessionDep) -> Booking:
+    booking = await session.get(Booking, booking_id)
+    if booking is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "booking not found")
+    return booking
+
+
+@router.get("", response_model=list[BookingRead])
+async def list_bookings(
+    session: SessionDep,
+    master_id: int | None = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+) -> Sequence[Booking]:
+    query = select(Booking).order_by(Booking.during).limit(limit)
+    if master_id is not None:
+        query = query.where(Booking.master_id == master_id)
+    result = await session.scalars(query)
+    return result.all()
