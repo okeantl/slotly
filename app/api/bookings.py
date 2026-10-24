@@ -18,6 +18,16 @@ router = APIRouter(prefix="/bookings", tags=["bookings"])
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 
+async def get_booking_or_404(booking_id: int, session: SessionDep) -> Booking:
+    booking = await session.get(Booking, booking_id)
+    if booking is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "booking not found")
+    return booking
+
+
+BookingDep = Annotated[Booking, Depends(get_booking_or_404)]
+
+
 @router.post("", response_model=BookingRead, status_code=status.HTTP_201_CREATED)
 async def create_booking(data: BookingCreate, session: SessionDep) -> Booking:
     service = await session.get(Service, data.service_id)
@@ -48,10 +58,7 @@ async def create_booking(data: BookingCreate, session: SessionDep) -> Booking:
 
 
 @router.get("/{booking_id}", response_model=BookingRead)
-async def get_booking(booking_id: int, session: SessionDep) -> Booking:
-    booking = await session.get(Booking, booking_id)
-    if booking is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "booking not found")
+async def get_booking(booking: BookingDep) -> Booking:
     return booking
 
 
@@ -70,11 +77,7 @@ async def list_bookings(
 
 
 @router.patch("/{booking_id}", response_model=BookingRead)
-async def update_booking(booking_id: int, data: BookingUpdate, session: SessionDep) -> Booking:
-    booking = await session.get(Booking, booking_id)
-    if booking is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "booking not found")
-
+async def update_booking(booking: BookingDep, data: BookingUpdate, session: SessionDep) -> Booking:
     changes = data.model_dump(exclude_unset=True)
 
     if "status" in changes:
