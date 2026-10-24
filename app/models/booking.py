@@ -2,8 +2,8 @@ from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Numeric, func
-from sqlalchemy.dialects.postgresql import TSTZRANGE, Range
+from sqlalchemy import DateTime, Enum, ForeignKey, Numeric, func, text
+from sqlalchemy.dialects.postgresql import TSTZRANGE, ExcludeConstraint, Range
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -16,6 +16,15 @@ class BookingStatus(StrEnum):
 
 class Booking(Base):
     __tablename__ = "bookings"
+    __table_args__ = (
+        ExcludeConstraint(
+            ("master_id", "="),
+            ("during", "&&"),
+            name="bookings_no_overlap",
+            using="gist",
+            where=text("status = 'active'"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     master_id: Mapped[int] = mapped_column(ForeignKey("masters.id"), index=True)
