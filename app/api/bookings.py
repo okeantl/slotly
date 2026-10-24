@@ -28,6 +28,19 @@ async def get_booking_or_404(booking_id: int, session: SessionDep) -> Booking:
 BookingDep = Annotated[Booking, Depends(get_booking_or_404)]
 
 
+async def commit_or_409(session: AsyncSession) -> None:
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        code = getattr(exc.orig, "sqlstate", None)
+        if code == "23P01":
+            raise HTTPException(status.HTTP_409_CONFLICT, "time slot is taken") from exc
+        if code == "23503":
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "related object not found") from exc
+        raise
+
+
 @router.post("", response_model=BookingRead, status_code=status.HTTP_201_CREATED)
 async def create_booking(data: BookingCreate, session: SessionDep) -> Booking:
     service = await session.get(Service, data.service_id)
@@ -47,13 +60,7 @@ async def create_booking(data: BookingCreate, session: SessionDep) -> Booking:
         price_at_booking=service.price,
     )
     session.add(booking)
-    try:
-        await session.commit()
-    except IntegrityError as exc:
-        await session.rollback()
-        if "bookings_no_overlap" in str(exc.orig):
-            raise HTTPException(status.HTTP_409_CONFLICT, "time slot is taken") from exc
-        raise
+    await commit_or_409(session)
     return booking
 
 
@@ -88,11 +95,5 @@ async def update_booking(booking: BookingDep, data: BookingUpdate, session: Sess
         starts_at = changes["starts_at"]
         booking.during = Range(starts_at, starts_at + timedelta(minutes=service.duration_minutes))
 
-    try:
-        await session.commit()
-    except IntegrityError as exc:
-        await session.rollback()
-        if "bookings_no_overlap" in str(exc.orig):
-            raise HTTPException(status.HTTP_409_CONFLICT, "time slot is taken") from exc
-        raise
+    await commit_or_409(session)
     return booking
