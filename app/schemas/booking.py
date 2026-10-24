@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict
+from pydantic import AwareDatetime, BaseModel, ConfigDict, field_validator
 
 from app.models.booking import BookingStatus
 
@@ -27,3 +27,17 @@ class BookingRead(BaseModel):
     status: BookingStatus
     price_at_booking: Decimal
     created_at: datetime
+
+
+class BookingUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    starts_at: AwareDatetime | None = None
+    status: BookingStatus | None = None
+
+    @field_validator("starts_at", "status")
+    @classmethod
+    def not_null(cls, value: object) -> object:
+        if value is None:
+            raise ValueError("field cannot be null")
+        return value

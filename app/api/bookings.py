@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_session
 from app.models import Booking, Master, Service
 from app.models.booking import BookingStatus
-from app.schemas.booking import BookingCreate, BookingRead
+from app.schemas.booking import BookingCreate, BookingRead, BookingUpdate
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
 
@@ -67,3 +67,30 @@ async def list_bookings(
         query = query.where(Booking.master_id == master_id)
     result = await session.scalars(query)
     return result.all()
+
+
+@router.patch("/{booking_id}", response_model=BookingRead)
+async def update_booking(booking_id: int, data: BookingUpdate, session: SessionDep) -> Booking:
+    booking = await session.get(Booking, booking_id)
+    if booking is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "booking not found")
+
+    changes = data.model_dump(exclude_unset=True)
+    print("model_dump():", data.model_dump(), "| exclude_unset", changes)
+
+    if "status" in changes:
+        booking.status = changes["status"]
+    if "starts_at" in changes:
+        service = await session.get(Service, booking.service_id)
+        assert service is not None
+        starts_at = changes["starts_at"]
+        booking.during = Range(starts_at, starts_at + timedelta(minutes=service.duration_minutes))
+
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        if "bookings_no_overlap" in str(exc.orig):
+            raise HTTPException(status.HTTP_409_CONFLICT, "time slot is taken") from exc
+        raise
+    return booking
