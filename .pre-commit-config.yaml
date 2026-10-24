@@ -1,0 +1,21 @@
+repos:
+  - repo: local                    # хуки берём из нашего .venv, а не скачиваем отдельно
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check   # команда, которую запустит хук
+        language: system           # "просто запусти команду", pre-commit ничего не ставит
+        types: [python]            # передавать только .py файлы
+
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format --check   # --check: только проверить, не исправлять
+        language: system
+        types: [python]
+
+      - id: mypy
+        name: mypy
+        entry: uv run mypy .
+        language: system
+        types: [python]
+        pass_filenames: false
