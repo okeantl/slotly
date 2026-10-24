@@ -76,7 +76,6 @@ async def update_booking(booking_id: int, data: BookingUpdate, session: SessionD
         raise HTTPException(status.HTTP_404_NOT_FOUND, "booking not found")
 
     changes = data.model_dump(exclude_unset=True)
-    print("model_dump():", data.model_dump(), "| exclude_unset", changes)
 
     if "status" in changes:
         booking.status = changes["status"]
