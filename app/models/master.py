@@ -9,4 +9,4 @@ class Master(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     salon_id: Mapped[int] = mapped_column(ForeignKey("salons.id"), index=True)
-    name: Mapped[str] = mapped_column(String(200))
+    full_name: Mapped[str] = mapped_column(String(200))
