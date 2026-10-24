@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_session
 from app.models import Booking, Master, Service
+from app.models.booking import BookingStatus
 from app.schemas.booking import BookingCreate, BookingRead
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
@@ -58,9 +59,10 @@ async def get_booking(booking_id: int, session: SessionDep) -> Booking:
 async def list_bookings(
     session: SessionDep,
     master_id: int | None = None,
+    status_: Annotated[BookingStatus, Query(alias="status")] = BookingStatus.ACTIVE,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> Sequence[Booking]:
-    query = select(Booking).order_by(Booking.during).limit(limit)
+    query = select(Booking).where(Booking.status == status_).order_by(Booking.during).limit(limit)
     if master_id is not None:
         query = query.where(Booking.master_id == master_id)
     result = await session.scalars(query)
