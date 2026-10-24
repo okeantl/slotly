@@ -42,3 +42,13 @@ class Booking(Base):
     )
     price_at_booking: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    @property
+    def starts_at(self) -> datetime:
+        assert self.during.lower is not None
+        return self.during.lower
+
+    @property
+    def ends_at(self) -> datetime:
+        assert self.during.upper is not None
+        return self.during.upper
