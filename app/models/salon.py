@@ -12,3 +12,4 @@ class Salon(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    timezone: Mapped[str] = mapped_column(String(64), server_default="Europe/Moscow")
