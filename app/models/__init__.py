@@ -1,4 +1,6 @@
 from app.models.base import Base
+from app.models.master import Master
 from app.models.salon import Salon
+from app.models.service import Service
 
-__all__ = ["Base", "Salon"]
+__all__ = ["Base", "Salon", "Master", "Service"]
