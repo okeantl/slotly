@@ -8,14 +8,12 @@ from sqlalchemy.dialects.postgresql import Range
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_session
+from app.api.deps import SessionDep
 from app.models import Booking, Master, Service
 from app.models.booking import BookingStatus
 from app.schemas.booking import BookingCreate, BookingRead, BookingUpdate
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
-
-SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 
 async def get_booking_or_404(booking_id: int, session: SessionDep) -> Booking:
