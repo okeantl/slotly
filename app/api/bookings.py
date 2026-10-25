@@ -5,10 +5,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import Range
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import SessionDep
+from app.api.deps import SessionDep, commit_or_http_error
 from app.models import Booking, Master, Service
 from app.models.booking import BookingStatus
 from app.schemas.booking import BookingCreate, BookingRead, BookingUpdate
@@ -24,19 +22,6 @@ async def get_booking_or_404(booking_id: int, session: SessionDep) -> Booking:
 
 
 BookingDep = Annotated[Booking, Depends(get_booking_or_404)]
-
-
-async def commit_or_409(session: AsyncSession) -> None:
-    try:
-        await session.commit()
-    except IntegrityError as exc:
-        await session.rollback()
-        code = getattr(exc.orig, "sqlstate", None)
-        if code == "23P01":
-            raise HTTPException(status.HTTP_409_CONFLICT, "time slot is taken") from exc
-        if code == "23503":
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "related object not found") from exc
-        raise
 
 
 @router.post("", response_model=BookingRead, status_code=status.HTTP_201_CREATED)
@@ -58,7 +43,7 @@ async def create_booking(data: BookingCreate, session: SessionDep) -> Booking:
         price_at_booking=service.price,
     )
     session.add(booking)
-    await commit_or_409(session)
+    await commit_or_http_error(session)
     return booking
 
 
@@ -93,5 +78,5 @@ async def update_booking(booking: BookingDep, data: BookingUpdate, session: Sess
         starts_at = changes["starts_at"]
         booking.during = Range(starts_at, starts_at + timedelta(minutes=service.duration_minutes))
 
-    await commit_or_409(session)
+    await commit_or_http_error(session)
     return booking
