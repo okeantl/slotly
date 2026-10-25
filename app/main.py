@@ -5,7 +5,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api import bookings, masters, salons
+from app.api import bookings, masters, salons, services
 from app.api.deps import get_session
 
 app = FastAPI()
@@ -13,6 +13,7 @@ app = FastAPI()
 app.include_router(bookings.router)
 app.include_router(salons.router)
 app.include_router(masters.router)
+app.include_router(services.router)
 
 
 @app.get("/health")
