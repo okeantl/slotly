@@ -6,7 +6,7 @@ from sqlalchemy import select
 
 from app.api.deps import SessionDep
 from app.models import Salon
-from app.schemas.salon import SalonCreate, SalonRead
+from app.schemas.salon import SalonCreate, SalonRead, SalonUpdate
 
 router = APIRouter(prefix="/salons", tags=["salons"])
 
@@ -41,3 +41,12 @@ async def list_salons(
 ) -> Sequence[Salon]:
     result = await session.scalars(select(Salon).order_by(Salon.id).limit(limit))
     return result.all()
+
+
+@router.patch("/{salon_id}", response_model=SalonRead)
+async def update_salon(salon: SalonDep, data: SalonUpdate, session: SessionDep) -> Salon:
+    changes = data.model_dump(exclude_unset=True)
+    for field, value in changes.items():
+        setattr(salon, field, value)
+    await session.commit()
+    return salon
