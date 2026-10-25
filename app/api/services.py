@@ -3,6 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import SessionDep, commit_or_http_error
 from app.models import Service
@@ -54,3 +55,15 @@ async def update_service(service: ServiceDep, data: ServiceUpdate, session: Sess
         setattr(service, field, value)
     await session.commit()
     return service
+
+
+@router.delete("/{service_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_service(service: ServiceDep, session: SessionDep) -> None:
+    await session.delete(service)
+    try:
+        await session.commit()
+    except IntegrityError as exc:
+        await session.rollback()
+        if getattr(exc.orig, "sqlstate", None) == "23503":
+            raise HTTPException(status.HTTP_409_CONFLICT, "service has bookings") from exc
+        raise
